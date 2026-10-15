@@ -2,38 +2,164 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Vigo Bike Parking</title>
+<title>Vigo Bike Parking Explorer</title>
 
 <link
   rel="stylesheet"
-  href="https://unpkg.com/leaflet/dist/#map {
-  height: 100%;
+  hrefleaflet.css
+
+<style>
+html,
+body {
   margin: 0;
+  height: 100%;
+  font-family: system-ui, sans-serif;
+}
+
+header {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+button {
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.tab {
+  display: none;
+  height: calc(100vh - 60px);
+}
+
+.tab.active {
+  display: block;
+}
+
+#datasette-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+#map-layout {
+  display: flex;
+  height: 100%;
+}
+
+#sidebar {
+  width: 420px;
+  border-right: 1px solid #ddd;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+#map {
+  flex: 1;
+}
+
+textarea {
+  width: 100%;
+  height: 200px;
+  font-family: monospace;
+  box-sizing: border-box;
+}
+
+#status {
+  margin-top: 10px;
+  color: #666;
+  font-size: 14px;
 }
 </style>
 </head>
-
 <body>
-<div id="map"></div>
 
-<script srckg.com/leaflet/dist/leaflet.jsscript>
+<header>
+  <button onclick="showTab('data-tab')">
+    Data Explorer
+  </button>
 
-<script type="module">
+  <button onclick="showTab('map-tab')">
+    Map Explorer
+  </button>
+</header>
+
+<div id="data-tab" class="tab active">
+  <iframe id="datasette-frame"></iframe>
+</div>
+
+<div id="map-tab" class="tab">
+
+  <div id="map-layout">
+
+    <div id="sidebar">
+
+      <h3>SQL Query</h3>
+
+      <textarea id="sql">
+SELECT *
+FROM parking
+WHERE lat IS NOT NULL
+  AND lon IS NOT NULL
+LIMIT 1000
+      </textarea>
+
+      <p>
+        The query must return lat and lon columns.
+      </p>
+
+      <button id="run">
+        Run Query
+      </button>
+
+      <div id="status"></div>
+
+    </div>
+
+    <div id="map"></div>
+
+  </div>
+
+</div>
+
+<script src="httpsleaflet/dist/leaflet.jsscript>
+
+<script>
+const USERNAME = "Daniel-at-github";
+const REPO = "vigo-bike-parking-dataset";
 
 const DB_URL =
-  "https://USERNAME.github.io/REPO/aparcabicis.db";
+  `https://${USERNAME}.github.io/${REPO}/aparcabicis.db`;
 
-/*
- * Datasette Lite runs entirely in the browser.
- * We load the SQLite database and query it locally.
- */
-const dsUrl =
-  "https://lite.datasette.io/?url=" +
-  encodeURIComponent(DB_URL);
+const DATASETTE_URL =
+  `https://lite.datasette.io/?url=${encodeURIComponent(DB_URL)}`;
 
-const map = L.map("map").setView([42.2406, -8.7207], 13);
+document.getElementById("datasette-frame").src =
+  DATASETTE_URL;
+
+function showTab(id) {
+  document
+    .querySelectorAll(".tab")
+    .forEach(el => el.classList.remove("active"));
+
+  document
+    .getElementById(id)
+    .classList.add("active");
+
+  if (id === "map-tab") {
+    map.invalidateSize();
+  }
+}
+</script>
+
+<script>
+const map = L.map("map").setView(
+  [42.2406, -8.7207],
+  13
+);
 
 L.tileLayer(
   "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -43,65 +169,61 @@ L.tileLayer(
   }
 ).addTo(map);
 
-/*
- * Datasette Lite exposes SQLite in-browser.
- * The simplest approach is to fetch the .db
- * and use Datasette Lite's query endpoint.
- */
-async function loadData() {
+let geoLayer;
 
-  const sql = `
-    select *
-    from parking
-    where lat is not null
-      and lon is not null
-  `;
+document
+  .getElementById("run")
+  .addEventListener(
+    "click",
+    runQuery
+  );
 
-  const api =
-    "https://lite.datasette.io/-/query" +
-    "?url=" + encodeURIComponent(DB_URL) +
-    "&sql=" + encodeURIComponent(sql);
+async function runQuery() {
 
-  const response = await fetch(api);
-  const data = await response.json();
+  const sql =
+    document.getElementById("sql").value;
 
-  const geojson = {
-    type: "FeatureCollection",
-    features: data.rows.map(row => ({
-      type: "Feature",
-      geometry: {
-        type: "Point",
-        coordinates: [
-          row.lon,
-          row.lat
-        ]
-      },
-      properties: row
-    }))
-  };
+  const status =
+    document.getElementById("status");
 
-  const layer = L.geoJSON(geojson, {
-    onEachFeature(feature, layer) {
+  status.textContent =
+    "Running query...";
 
-      const props =
-        feature.properties;
+  try {
 
-      const html =
-        Object.entries(props)
-          .map(([k, v]) =>
-            `<b>${k}</b>: ${v}`
-          )
-          .join("<br>");
+    /*
+     * Placeholder.
+     *
+     * Datasette Lite currently does not expose
+     * an officially documented public API that
+     * can be queried directly from arbitrary
+     * GitHub Pages applications.
+     *
+     * For production, replace this section with:
+     *
+     * - sqlite-wasm
+     * - DuckDB-WASM
+     * - sql.js
+     *
+     * reading the same aparcabicis.db
+     */
 
-      layer.bindPopup(html);
-    }
-  }).addTo(map);
+    alert(
+      "Next step: connect this panel to DuckDB-WASM or sql.js to execute SQL locally."
+    );
 
-  map.fitBounds(layer.getBounds());
+    status.textContent =
+      "Map integration skeleton ready.";
+
+  } catch (err) {
+
+    console.error(err);
+
+    status.textContent =
+      err.message;
+  }
 }
-
-loadData();
-
 </script>
+
 </body>
 </html>
