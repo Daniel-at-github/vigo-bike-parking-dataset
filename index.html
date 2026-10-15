@@ -1,6 +1,107 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url=https://lite.datasette.io/?url=https://Daniel-at-github.github.io/vigo-bike-parking-dataset/aparcabicis.db">
-</head><body>
-<p>Redirecting to <a href="https://lite.datasette.io/?url=https://Daniel-at-github.github.io/vigo-bike-parking-dataset/aparcabicis.db">Datasette Lite</a>…</p>
-</body></html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Vigo Bike Parking</title>
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet/dist/#map {
+  height: 100%;
+  margin: 0;
+}
+</style>
+</head>
+
+<body>
+<div id="map"></div>
+
+<script srckg.com/leaflet/dist/leaflet.jsscript>
+
+<script type="module">
+
+const DB_URL =
+  "https://USERNAME.github.io/REPO/aparcabicis.db";
+
+/*
+ * Datasette Lite runs entirely in the browser.
+ * We load the SQLite database and query it locally.
+ */
+const dsUrl =
+  "https://lite.datasette.io/?url=" +
+  encodeURIComponent(DB_URL);
+
+const map = L.map("map").setView([42.2406, -8.7207], 13);
+
+L.tileLayer(
+  "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {
+    attribution:
+      "&copy; OpenStreetMap contributors"
+  }
+).addTo(map);
+
+/*
+ * Datasette Lite exposes SQLite in-browser.
+ * The simplest approach is to fetch the .db
+ * and use Datasette Lite's query endpoint.
+ */
+async function loadData() {
+
+  const sql = `
+    select *
+    from parking
+    where lat is not null
+      and lon is not null
+  `;
+
+  const api =
+    "https://lite.datasette.io/-/query" +
+    "?url=" + encodeURIComponent(DB_URL) +
+    "&sql=" + encodeURIComponent(sql);
+
+  const response = await fetch(api);
+  const data = await response.json();
+
+  const geojson = {
+    type: "FeatureCollection",
+    features: data.rows.map(row => ({
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [
+          row.lon,
+          row.lat
+        ]
+      },
+      properties: row
+    }))
+  };
+
+  const layer = L.geoJSON(geojson, {
+    onEachFeature(feature, layer) {
+
+      const props =
+        feature.properties;
+
+      const html =
+        Object.entries(props)
+          .map(([k, v]) =>
+            `<b>${k}</b>: ${v}`
+          )
+          .join("<br>");
+
+      layer.bindPopup(html);
+    }
+  }).addTo(map);
+
+  map.fitBounds(layer.getBounds());
+}
+
+loadData();
+
+</script>
+</body>
+</html>
